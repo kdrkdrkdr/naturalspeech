@@ -146,4 +146,4 @@ def japanese_triphone_cleaners(text):
   if len(text) > 0  and re.match('[A-Za-z]',text[-1]):
     text += '.'
     
-  return 
+  return text
