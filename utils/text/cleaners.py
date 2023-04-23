@@ -15,6 +15,13 @@ hyperparameter. Some cleaners are English-specific. You'll typically want to use
 import re
 from unidecode import unidecode
 from phonemizer import phonemize
+import pyopenjtalk
+
+# Regular expression matching Japanese without punctuation marks:
+_japanese_characters = re.compile(r'[A-Za-z\d\u3005\u3040-\u30ff\u4e00-\u9fff\uff11-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9d]')
+
+# Regular expression matching non-Japanese characters or punctuation marks:
+_japanese_marks = re.compile(r'[^A-Za-z\d\u3005\u3040-\u30ff\u4e00-\u9fff\uff11-\uff19\uff21-\uff3a\uff41-\uff5a\uff66-\uff9d]')
 
 
 # Regular expression matching whitespace:
@@ -108,3 +115,35 @@ def english_cleaners2(text):
     )
     phonemes = collapse_whitespace(phonemes)
     return phonemes
+
+
+def japanese_triphone_cleaners(text):
+  sentences = re.split(_japanese_marks, text)
+  marks = re.findall(_japanese_marks, text)
+  text = ''
+  for i, sentence in enumerate(sentences):
+    phones = pyopenjtalk.g2p(sentence, kana=False)
+    phones = phones.replace(' ','')
+    phones = phones.replace('A', 'a').replace('I', 'i').replace('U', 'u').replace('E', 'e').replace('O', 'o')
+    phones = phones.replace('ch','ʧ').replace('sh','ʃ').replace('cl','Q')
+    triphones = []
+    length = len(phones)
+    for j, phone in enumerate(phones):
+      if length == 1:
+        triphone = phone
+      else:
+        if j == 0:
+          triphone = f'{phone}+{phones[j+1]}'
+        elif j == length - 1:
+          triphone = f'{phones[j-1]}-{phone}'
+        else:
+          triphone = f'{phones[j-1]}-{phone}+{phones[j+1]}'
+      triphones.append(triphone)
+    subtext = ' '.join(triphones)
+    text += subtext
+    if i < len(marks):
+      text += unidecode(marks[i]).replace(' ', '')
+  if len(text) > 0  and re.match('[A-Za-z]',text[-1]):
+    text += '.'
+    
+  return 
